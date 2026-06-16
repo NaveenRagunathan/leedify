@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          razorpay_sub_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          subscription_end: string | null
+          subscription_start: string | null
+          updated_at: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name?: string | null
+          razorpay_sub_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          subscription_end?: string | null
+          subscription_start?: string | null
+          updated_at?: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          razorpay_sub_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          subscription_end?: string | null
+          subscription_start?: string | null
+          updated_at?: string
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
+      user_icp: {
+        Row: {
+          company_size: string[]
+          created_at: string
+          geography: string[]
+          id: string
+          industry: string | null
+          job_titles: string[]
+          keywords: string[]
+          product_desc: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_size?: string[]
+          created_at?: string
+          geography?: string[]
+          id?: string
+          industry?: string | null
+          job_titles?: string[]
+          keywords?: string[]
+          product_desc?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_size?: string[]
+          created_at?: string
+          geography?: string[]
+          id?: string
+          industry?: string | null
+          job_titles?: string[]
+          keywords?: string[]
+          product_desc?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +97,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      subscription_status: "pending_payment" | "active" | "paused" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +224,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_status: ["pending_payment", "active", "paused", "cancelled"],
+    },
   },
 } as const
