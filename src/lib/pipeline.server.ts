@@ -3,14 +3,14 @@
  * Orchestrates: ICP → search → enrich → dedup → score → store → email.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { searchPeople, getProfile, type LinkedInProfile } from "@/lib/linkedin-mcp.server";
-import { searchGoogleForLeads } from "@/lib/google-search.server";
+import { getProfile, type LinkedInProfile } from "@/lib/linkedin-mcp.server";
 import { scoreLeads, type ScoredLead } from "@/lib/scorer.server";
 import { sendLeadBatchEmail } from "@/lib/email.functions";
+import { getSecret } from "@/lib/secrets.server";
 
 const LEADS_PER_BATCH = 15;
-const MIN_SCORE = 50;
-const RELAXED_MIN_SCORE = 40;
+const THRESHOLDS = [50, 40, 30, 0];
+const MAX_SEARCH_ROUNDS = 3;
 
 interface PipelineResult {
   userId: string;
@@ -21,12 +21,13 @@ interface PipelineResult {
 
 /**
  * Run the full pipeline for a single user.
+ * Uses multi-round agentic search: if first pass fails to find enough leads,
+ * it learns from partial results and tries again with broader queries.
  */
 export async function runPipelineForUser(userId: string): Promise<PipelineResult> {
   console.log(`[Pipeline] Starting for user ${userId}`);
 
   try {
-    // 1. Fetch ICP
     const { data: icp, error: icpErr } = await supabaseAdmin
       .from("user_icp")
       .select("*")
@@ -37,7 +38,6 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
       return { userId, leadsGenerated: 0, emailSent: false, error: "No ICP found" };
     }
 
-    // 2. Fetch user profile for email
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("name, status")
@@ -48,71 +48,79 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
       return { userId, leadsGenerated: 0, emailSent: false, error: "User not active or trial" };
     }
 
-    // Get user email from auth
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
     const userEmail = authUser?.user?.email;
     if (!userEmail) {
       return { userId, leadsGenerated: 0, emailSent: false, error: "No email found" };
     }
 
-    // 3. Build search queries from ICP
-    const queries = buildSearchQueries(icp);
-
-    // 4. S1: Serper (Google Search API) — primary source, works for any ICP/geography
-    let rawLeads: LinkedInProfile[] = [];
+    // Multi-round agentic search
+    let allFound: LinkedInProfile[] = [];
     const seenUrls = new Set<string>();
+    let learnedTerms: string[] = [];
+    const geo = icp.geography?.[0] || "";
 
-    const serperLeads = await searchGoogleForLeads({
-      jobTitles: icp.job_titles || [],
-      industry: icp.industry || "",
-      keywords: icp.keywords || [],
-      geography: icp.geography || [],
-      limit: 40,
-    });
+    for (let round = 0; round < MAX_SEARCH_ROUNDS; round++) {
+      if (allFound.length >= 40) break;
+      console.log(`[Pipeline] Search round ${round + 1}/${MAX_SEARCH_ROUNDS}`);
 
-    for (const gl of serperLeads) {
-      const norm = normalizeUrl(gl.linkedin_url);
-      if (!seenUrls.has(norm)) {
-        seenUrls.add(norm);
-        rawLeads.push(gl);
-      }
-    }
-    console.log(`[Pipeline] Serper returned ${rawLeads.length} leads`);
+      const roundQueries = buildAgenticQueries(icp, round, learnedTerms);
 
-    // 5. S2: LinkedIn MCP — supplement if Serper didn't return enough
-    if (rawLeads.length < 25) {
-      for (const query of queries.slice(0, 3)) {
-        if (rawLeads.length >= 40) break;
-        console.log(`[Pipeline] LinkedIn search: "${query}"`);
-        const results = await searchPeople({ keywords: query, location: icp.geography?.[0] });
-        for (const r of results) {
-          const norm = normalizeUrl(r.linkedin_url);
-          if (!seenUrls.has(norm)) {
+      // Serper search
+      for (const q of roundQueries) {
+        if (allFound.length >= 40) break;
+        try {
+          const res = await fetch("https://google.serper.dev/search", {
+            method: "POST",
+            headers: {
+              "X-API-KEY": await getSecret("SERPER_API_KEY"),
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ q, num: 20 }),
+          });
+          if (!res.ok) continue;
+          const data = await res.json() as any;
+          for (const item of data.organic || []) {
+            if (!item.link) continue;
+            const urlMatch = item.link.match(/https?:\/\/(\w+\.)?linkedin\.com\/in\/[\w-]+\/?$/);
+            if (!urlMatch || item.link.includes("/posts/")) continue;
+            const norm = normalizeUrl(urlMatch[0]);
+            if (seenUrls.has(norm)) continue;
             seenUrls.add(norm);
-            rawLeads.push(r);
+            const lead = parseLeadFromSearch(item.title || "", item.snippet || "", urlMatch[0]);
+            if (lead.full_name) allFound.push(lead);
           }
-        }
-        await new Promise((r) => setTimeout(r, 1500));
+          console.log(`[Serper] Round ${round + 1}: "${q.slice(0, 60)}" → ${allFound.length} unique`);
+        } catch { continue; }
       }
-      console.log(`[Pipeline] After LinkedIn MCP: ${rawLeads.length} total leads`);
+
+      // Learn from found leads for next round
+      if (allFound.length > 0) {
+        const companies = [...new Set(allFound.map((l) => l.company).filter(Boolean))];
+        const titles = [...new Set(allFound.map((l) => l.title).filter(Boolean))];
+        learnedTerms = [...companies.slice(0, 5), ...titles.slice(0, 5)];
+      }
+
+      if (allFound.length >= 40) break;
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
-    if (rawLeads.length === 0) {
+    if (allFound.length === 0) {
       return { userId, leadsGenerated: 0, emailSent: false, error: "No leads found from any source" };
     }
 
-    // 6. Dedup against previously delivered leads
-    const dedupedLeads = await dedup(userId, rawLeads);
-    console.log(`[Pipeline] After dedup: ${dedupedLeads.length} leads`);
+    // Dedup against previously delivered leads
+    const deduped = await dedup(userId, allFound);
+    console.log(`[Pipeline] After dedup: ${deduped.length} leads`);
 
-    if (dedupedLeads.length === 0) {
+    if (deduped.length === 0) {
       return { userId, leadsGenerated: 0, emailSent: false, error: "All leads already delivered" };
     }
 
-    // 7. Enrich top leads with profile details (if we got them from search)
-    const enriched = await enrichLeads(dedupedLeads.slice(0, 25));
+    // Enrich
+    const enriched = await enrichLeads(deduped.slice(0, 30));
 
-    // 8. Score with Mistral AI
+    // Score
     const scored = await scoreLeads(enriched, {
       industry: icp.industry || "",
       job_titles: icp.job_titles || [],
@@ -122,20 +130,22 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
       product_desc: icp.product_desc,
     });
 
-    // 9. Filter by score threshold
-    let qualified = scored.filter((l) => l.score >= MIN_SCORE);
-    if (qualified.length < LEADS_PER_BATCH) {
-      qualified = scored.filter((l) => l.score >= RELAXED_MIN_SCORE);
+    // Multi-threshold progressive filtering
+    let batch: ScoredLead[] = [];
+    for (const threshold of THRESHOLDS) {
+      const qualified = scored.filter((l) => l.score >= threshold);
+      if (qualified.length >= LEADS_PER_BATCH || threshold === 0) {
+        batch = qualified.slice(0, LEADS_PER_BATCH);
+        console.log(`[Pipeline] ${batch.length} leads at threshold ${threshold}`);
+        break;
+      }
     }
-
-    const batch = qualified.slice(0, LEADS_PER_BATCH);
-    console.log(`[Pipeline] ${batch.length} leads passed scoring`);
 
     if (batch.length === 0) {
-      return { userId, leadsGenerated: 0, emailSent: false, error: "No leads passed score threshold" };
+      return { userId, leadsGenerated: 0, emailSent: false, error: "No leads passed scoring" };
     }
 
-    // 10. Store leads in DB
+    // Store in DB
     const today = new Date().toISOString().split("T")[0];
     const { error: insertErr } = await supabaseAdmin.from("leads").insert(
       batch.map((l) => ({
@@ -148,14 +158,14 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
         phone: l.phone || null,
         score: l.score,
         score_reason: l.score_reason,
-        source: "linkedin_mcp",
+        source: "google_search",
         batch_date: today,
         delivered_at: new Date().toISOString(),
       }))
     );
     if (insertErr) console.error("[Pipeline] Lead insert error:", insertErr);
 
-    // 11. Send email
+    // Send email
     let emailSent = false;
     try {
       await sendLeadBatchEmail({
@@ -172,13 +182,10 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
           score_reason: l.score_reason,
         })),
         batchDate: new Date().toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
+          day: "numeric", month: "short", year: "numeric",
         }),
       });
 
-      // Log email
       await supabaseAdmin.from("email_messages").insert({
         user_id: userId,
         message_type: "daily_batch",
@@ -201,6 +208,67 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
     console.error(`[Pipeline] Fatal error for ${userId}:`, e);
     return { userId, leadsGenerated: 0, emailSent: false, error: String(e) };
   }
+}
+
+function parseLeadFromSearch(title: string, snippet: string, url: string): LinkedInProfile {
+  // Remove " - LinkedIn" suffix and split on common delimiters
+  const nameMatch = title.match(/^([^-–—|]+?)\s*[-–—|]/);
+  const name = nameMatch ? nameMatch[1].trim() : title.replace(/ - LinkedIn$/, "").trim();
+  const titleFromSnippet = snippet.split(" - ")[0] || snippet.split(" · ")[0] || "";
+  const companyFromSnippet = snippet.match(/(?:at|@|·)\s*([A-Z][A-Za-z0-9 .&]+)/)?.[1] || "";
+
+  return {
+    full_name: name,
+    title: titleFromSnippet,
+    company: companyFromSnippet,
+    linkedin_url: url,
+    location: "",
+    email: null,
+    phone: null,
+  };
+}
+
+function buildAgenticQueries(icp: any, round: number, learnedTerms: string[]): string[] {
+  const titles = icp.job_titles || [];
+  const keywords = icp.keywords || [];
+  const industry = icp.industry || "";
+  const geo = (icp.geography || [])[0] || "";
+  const queries: string[] = [];
+
+  if (round === 0) {
+    for (const title of titles) {
+      queries.push(`site:linkedin.com/in "${title}" ${industry} ${geo}`);
+    }
+    for (const title of titles.slice(0, 2)) {
+      for (const kw of keywords.slice(0, 2)) {
+        queries.push(`site:linkedin.com/in "${title}" ${kw} ${geo}`);
+      }
+    }
+    if (keywords.length > 0) {
+      queries.push(`site:linkedin.com/in ${industry} ${keywords.slice(0, 3).join(" ")} ${geo}`);
+    }
+  } else if (round === 1) {
+    for (const term of learnedTerms.slice(0, 4)) {
+      queries.push(`site:linkedin.com/in ${term} ${industry}`);
+    }
+    for (const title of titles.slice(0, 2)) {
+      queries.push(`site:linkedin.com/in "${title}" ${geo}`);
+    }
+    for (const kw of keywords.slice(0, 3)) {
+      queries.push(`site:linkedin.com/in ${kw} ${industry} ${geo}`);
+    }
+  } else {
+    for (const title of titles) {
+      queries.push(`linkedin.com/in ${title}`);
+    }
+    queries.push(`linkedin.com/in ${industry} ${geo}`);
+    for (const kw of keywords.slice(0, 3)) {
+      queries.push(`linkedin.com/in ${kw} ${geo}`);
+    }
+    if (geo) queries.push(`linkedin.com/in ${geo} ${industry}`);
+  }
+
+  return [...new Set(queries.filter(Boolean))];
 }
 
 /**
@@ -232,39 +300,6 @@ export async function runPipelineForAllUsers(): Promise<PipelineResult[]> {
 }
 
 // --- Helpers ---
-
-function buildSearchQueries(icp: any): string[] {
-  const queries: string[] = [];
-  const titles = icp.job_titles || [];
-  const keywords = icp.keywords || [];
-  const industry = icp.industry || "";
-  const geo = (icp.geography || [])[0] || "";
-
-  // Primary: each title + industry (location handled by MCP param)
-  for (const title of titles.slice(0, 3)) {
-    queries.push(`${title} ${industry}`.trim());
-  }
-
-  // Secondary: title + keywords
-  for (const title of titles.slice(0, 2)) {
-    for (const kw of keywords.slice(0, 2)) {
-      queries.push(`${title} ${kw}`.trim());
-    }
-  }
-
-  // Tertiary: industry + keywords
-  if (keywords.length > 0) {
-    queries.push(`${industry} ${keywords.join(" ")}`.trim());
-  }
-
-  // Geo-specific if set
-  if (geo) {
-    queries.push(`${titles[0] || industry} ${geo}`.trim());
-  }
-
-  // Deduplicate
-  return [...new Set(queries.filter(Boolean))];
-}
 
 function normalizeUrl(url: string): string {
   return url
