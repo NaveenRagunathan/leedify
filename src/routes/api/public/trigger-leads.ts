@@ -11,19 +11,9 @@ export const Route = createFileRoute("/api/public/trigger-leads")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        let body: any;
-        try {
-          body = await request.json();
-        } catch {
-          return new Response("Bad JSON", { status: 400 });
-        }
+        const authHeader = request.headers.get("authorization");
+        const secret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
-        const { userId, secret } = body;
-        if (!userId) {
-          return new Response("Missing userId", { status: 400 });
-        }
-
-        // Validate secret
         const { getSecret } = await import("@/lib/secrets.server");
         let cronSecret: string;
         try {
@@ -34,6 +24,18 @@ export const Route = createFileRoute("/api/public/trigger-leads")({
 
         if (!cronSecret || secret !== cronSecret) {
           return new Response("Unauthorized", { status: 401 });
+        }
+
+        let body: any;
+        try {
+          body = await request.json();
+        } catch {
+          return new Response("Bad JSON", { status: 400 });
+        }
+
+        const { userId } = body;
+        if (!userId) {
+          return new Response("Missing userId", { status: 400 });
         }
 
         const { runPipelineForUser } = await import("@/lib/pipeline.server");

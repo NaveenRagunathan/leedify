@@ -17,14 +17,21 @@ SELECT cron.schedule(
 );
 
 -- Nightly lead generation at 12:00 AM IST (18:30 UTC).
+-- Uses POST with Authorization header instead of URL query param.
 SELECT cron.schedule(
   'nightly-leads',
   '30 18 * * *',
   $$
-    SELECT net.http_get(
+    SELECT net.http_post(
       url := current_setting('app.settings.app_url', true)
-             || '/api/public/cron-leads?secret='
-             || current_setting('app.settings.cron_secret', true)
+             || '/api/public/cron-leads',
+      headers := jsonb_build_object(
+        'Authorization',
+        'Bearer ' || current_setting('app.settings.cron_secret', true),
+        'Content-Type',
+        'application/json'
+      ),
+      body := '{}'::jsonb
     );
   $$
 );

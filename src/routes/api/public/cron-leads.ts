@@ -9,9 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/cron-leads")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
-        const url = new URL(request.url);
-        const secret = url.searchParams.get("secret");
+      POST: async ({ request }) => {
+        const authHeader = request.headers.get("authorization");
+        const secret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
         // Validate cron secret to prevent unauthorized triggers
         const { getSecret } = await import("@/lib/secrets.server");
