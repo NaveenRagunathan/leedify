@@ -44,8 +44,8 @@ export async function runPipelineForUser(userId: string): Promise<PipelineResult
       .eq("id", userId)
       .single();
 
-    if (profile?.status !== "active") {
-      return { userId, leadsGenerated: 0, emailSent: false, error: "User not active" };
+    if (profile?.status !== "active" && profile?.status !== "trial") {
+      return { userId, leadsGenerated: 0, emailSent: false, error: "User not active or trial" };
     }
 
     // Get user email from auth
@@ -210,7 +210,7 @@ export async function runPipelineForAllUsers(): Promise<PipelineResult[]> {
   const { data: users, error } = await supabaseAdmin
     .from("profiles")
     .select("id")
-    .eq("status", "active");
+    .in("status", ["active", "trial"]);
 
   if (error || !users) {
     console.error("[Pipeline] Could not fetch active users:", error);

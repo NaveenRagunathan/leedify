@@ -75,10 +75,10 @@ function Hero() {
               search={{ mode: "signup" }}
               className="group inline-flex items-center gap-2 rounded-md bg-lime px-6 py-3.5 text-base font-semibold text-lime-foreground transition hover:opacity-90"
             >
-              Get started for ₹499/month
+              Start free trial
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
             </Link>
-            <p className="text-sm text-muted-foreground">No outreach tools. No LinkedIn account needed.</p>
+            <p className="text-sm text-muted-foreground">No credit card · 7-day free trial · ₹499/month after</p>
           </div>
         </div>
 
@@ -166,8 +166,9 @@ function Pricing() {
         <div className="mx-auto max-w-xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime">Pricing</p>
           <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight md:text-4xl">
-            One plan. No tiers. No feature gates.
+            Start with a 7-day free trial.
           </h2>
+          <p className="mt-3 text-muted-foreground">No credit card. Full access. Cancel anytime.</p>
         </div>
 
         <div className="mx-auto mt-12 max-w-md">
@@ -176,7 +177,7 @@ function Pricing() {
               <span className="text-5xl font-bold tracking-tight">₹499</span>
               <span className="text-muted-foreground">/month</span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">~$5/month · 15 leads every day</p>
+            <p className="mt-2 text-sm text-muted-foreground">7-day free trial · 15 leads every day</p>
 
             <ul className="mt-8 space-y-3">
               {features.map((f) => (
@@ -194,7 +195,7 @@ function Pricing() {
               search={{ mode: "signup" }}
               className="mt-10 flex w-full items-center justify-center gap-2 rounded-md bg-lime px-5 py-3 text-sm font-semibold text-lime-foreground transition hover:opacity-90"
             >
-              Get started <ArrowRight className="h-4 w-4" />
+              Start free trial <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
