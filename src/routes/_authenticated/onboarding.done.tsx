@@ -15,10 +15,13 @@ function Done() {
         </div>
         <h1 className="mt-6 text-3xl font-bold tracking-tight">Your ICP is locked in.</h1>
         <p className="mt-3 text-muted-foreground">
-          Next up: payment, WhatsApp connection, and your first batch of 15 leads. We'll wire those up in the next milestone.
+          One last step: activate your subscription and we'll start delivering 15 researched leads every morning at 8am IST.
         </p>
-        <Link to="/" className="mt-8 inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-lime/40">
-          Back to home
+        <Link
+          to="/checkout"
+          className="mt-8 inline-flex items-center gap-2 rounded-md bg-lime px-5 py-2.5 text-sm font-semibold text-background transition hover:bg-lime/90"
+        >
+          Continue to payment →
         </Link>
       </div>
     </div>
