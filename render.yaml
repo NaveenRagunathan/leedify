@@ -26,4 +26,21 @@ services:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: LINKEDIN_MCP_URL
-        value: ""
+        value: "http://linkedin-mcp:3100/mcp"
+      - key: APP_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+
+  # LinkedIn MCP server — runs Playwright for LinkedIn lead enrichment.
+  # Requires Render Starter plan ($7/mo) or above (Docker not supported on Free).
+  # The web service above will still work without this (Serper handles S1).
+  #- type: worker
+  #  runtime: image
+  #  name: linkedin-mcp
+  #  plan: starter
+  #  image:
+  #    url: stickerdaniel/linkedin-mcp-server
+  #  envVars:
+  #    - key: LINKEDIN_COOKIE
+  #      sync: false
