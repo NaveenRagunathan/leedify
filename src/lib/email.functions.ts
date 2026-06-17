@@ -141,7 +141,7 @@ export async function sendLeadBatchEmail(opts: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Leadify <onboarding@resend.dev>",
+      from: "Leadify <leads@leedify.plainly.cloud>",
       to: opts.to,
       subject: `Your ${opts.leads.length} leads for ${opts.batchDate} — Leadify`,
       html: buildEmailHtml(opts.userName, opts.leads, opts.batchDate),
