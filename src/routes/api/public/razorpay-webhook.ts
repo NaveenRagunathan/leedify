@@ -5,9 +5,12 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-        if (!secret) {
-          console.error("Missing RAZORPAY_WEBHOOK_SECRET");
+        const { getSecret } = await import("@/lib/secrets.server");
+        let secret: string;
+        try {
+          secret = await getSecret("RAZORPAY_WEBHOOK_SECRET");
+        } catch {
+          console.error("Missing RAZORPAY_WEBHOOK_SECRET in app_secrets");
           return new Response("Server misconfigured", { status: 500 });
         }
 
@@ -46,17 +49,27 @@ export const Route = createFileRoute("/api/public/razorpay-webhook")({
           event === "subscription.charged" ||
           event === "subscription.resumed"
         ) {
-          const { error } = await supabaseAdmin
+          const { data: updatedUsers, error } = await supabaseAdmin
             .from("profiles")
             .update({
               status: "active",
               subscription_start: toIso(subscription.current_start) ?? new Date().toISOString(),
               subscription_end: toIso(subscription.current_end),
             })
-            .eq("razorpay_sub_id", subscriptionId);
+            .eq("razorpay_sub_id", subscriptionId)
+            .select("id");
           if (error) {
             console.error("Webhook update failed", error);
             return new Response("DB error", { status: 500 });
+          }
+
+          // Trigger Day 1 lead generation for newly activated user
+          if (event === "subscription.activated" && updatedUsers?.[0]) {
+            const { runPipelineForUser } = await import("@/lib/pipeline.server");
+            // Run async — don't block webhook response
+            runPipelineForUser(updatedUsers[0].id).catch((e) =>
+              console.error("Day 1 pipeline failed:", e)
+            );
           }
         } else if (event === "subscription.paused" || event === "subscription.halted") {
           await supabaseAdmin

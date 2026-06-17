@@ -14,7 +14,10 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedCheckoutRouteImport } from './routes/_authenticated/checkout'
+import { Route as ApiPublicTriggerLeadsRouteImport } from './routes/api/public/trigger-leads'
 import { Route as ApiPublicRazorpayWebhookRouteImport } from './routes/api/public/razorpay-webhook'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as ApiPublicCronLeadsRouteImport } from './routes/api/public/cron-leads'
 import { Route as AuthenticatedOnboardingDoneRouteImport } from './routes/_authenticated/onboarding.done'
 
 const AuthRoute = AuthRouteImport.update({
@@ -41,12 +44,27 @@ const AuthenticatedCheckoutRoute = AuthenticatedCheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicTriggerLeadsRoute = ApiPublicTriggerLeadsRouteImport.update({
+  id: '/api/public/trigger-leads',
+  path: '/api/public/trigger-leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRazorpayWebhookRoute =
   ApiPublicRazorpayWebhookRouteImport.update({
     id: '/api/public/razorpay-webhook',
     path: '/api/public/razorpay-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronLeadsRoute = ApiPublicCronLeadsRouteImport.update({
+  id: '/api/public/cron-leads',
+  path: '/api/public/cron-leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedOnboardingDoneRoute =
   AuthenticatedOnboardingDoneRouteImport.update({
     id: '/done',
@@ -60,7 +78,10 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof AuthenticatedCheckoutRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/onboarding/done': typeof AuthenticatedOnboardingDoneRoute
+  '/api/public/cron-leads': typeof ApiPublicCronLeadsRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
+  '/api/public/trigger-leads': typeof ApiPublicTriggerLeadsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,7 +89,10 @@ export interface FileRoutesByTo {
   '/checkout': typeof AuthenticatedCheckoutRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/onboarding/done': typeof AuthenticatedOnboardingDoneRoute
+  '/api/public/cron-leads': typeof ApiPublicCronLeadsRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
+  '/api/public/trigger-leads': typeof ApiPublicTriggerLeadsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,7 +102,10 @@ export interface FileRoutesById {
   '/_authenticated/checkout': typeof AuthenticatedCheckoutRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/_authenticated/onboarding/done': typeof AuthenticatedOnboardingDoneRoute
+  '/api/public/cron-leads': typeof ApiPublicCronLeadsRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
+  '/api/public/trigger-leads': typeof ApiPublicTriggerLeadsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,7 +115,10 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/onboarding'
     | '/onboarding/done'
+    | '/api/public/cron-leads'
+    | '/api/public/health'
     | '/api/public/razorpay-webhook'
+    | '/api/public/trigger-leads'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -96,7 +126,10 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/onboarding'
     | '/onboarding/done'
+    | '/api/public/cron-leads'
+    | '/api/public/health'
     | '/api/public/razorpay-webhook'
+    | '/api/public/trigger-leads'
   id:
     | '__root__'
     | '/'
@@ -105,14 +138,20 @@ export interface FileRouteTypes {
     | '/_authenticated/checkout'
     | '/_authenticated/onboarding'
     | '/_authenticated/onboarding/done'
+    | '/api/public/cron-leads'
+    | '/api/public/health'
     | '/api/public/razorpay-webhook'
+    | '/api/public/trigger-leads'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicCronLeadsRoute: typeof ApiPublicCronLeadsRoute
+  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRazorpayWebhookRoute: typeof ApiPublicRazorpayWebhookRoute
+  ApiPublicTriggerLeadsRoute: typeof ApiPublicTriggerLeadsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,11 +191,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCheckoutRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/trigger-leads': {
+      id: '/api/public/trigger-leads'
+      path: '/api/public/trigger-leads'
+      fullPath: '/api/public/trigger-leads'
+      preLoaderRoute: typeof ApiPublicTriggerLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/razorpay-webhook': {
       id: '/api/public/razorpay-webhook'
       path: '/api/public/razorpay-webhook'
       fullPath: '/api/public/razorpay-webhook'
       preLoaderRoute: typeof ApiPublicRazorpayWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron-leads': {
+      id: '/api/public/cron-leads'
+      path: '/api/public/cron-leads'
+      fullPath: '/api/public/cron-leads'
+      preLoaderRoute: typeof ApiPublicCronLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/onboarding/done': {
@@ -200,7 +260,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicCronLeadsRoute: ApiPublicCronLeadsRoute,
+  ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRazorpayWebhookRoute: ApiPublicRazorpayWebhookRoute,
+  ApiPublicTriggerLeadsRoute: ApiPublicTriggerLeadsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

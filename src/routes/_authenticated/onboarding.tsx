@@ -86,7 +86,7 @@ function Onboarding() {
       }, { onConflict: "user_id" });
       if (error) throw error;
       toast.success("ICP saved.");
-      navigate({ to: "/onboarding/done" });
+      navigate({ to: "/checkout" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save");
     } finally {

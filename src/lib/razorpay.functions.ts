@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getSecrets } from "@/lib/secrets.server";
 
 /**
  * Creates a Razorpay subscription for the current user and stores its id on the profile.
@@ -8,13 +9,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const createRazorpaySubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    const planId = process.env.RAZORPAY_PLAN_ID;
-
-    if (!keyId || !keySecret || !planId) {
-      throw new Error("Razorpay is not configured. Missing keys or plan id.");
-    }
+    const { RAZORPAY_KEY_ID: keyId, RAZORPAY_KEY_SECRET: keySecret, RAZORPAY_PLAN_ID: planId } =
+      await getSecrets(["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_PLAN_ID"]);
 
     const { supabase, userId } = context;
 
@@ -54,7 +50,7 @@ export const createRazorpaySubscription = createServerFn({ method: "POST" })
         throw new Error("Could not create subscription. Please try again.");
       }
 
-      const sub = (await res.json()) as { id: string };
+      const sub = (await res.json()) as { id: string; short_url: string };
       subscriptionId = sub.id;
 
       const { error: updateErr } = await supabase
@@ -64,12 +60,23 @@ export const createRazorpaySubscription = createServerFn({ method: "POST" })
       if (updateErr) {
         console.error("Could not store subscription id", updateErr);
       }
+
+      return {
+        alreadyActive: false as const,
+        subscriptionId,
+        paymentUrl: sub.short_url,
+      };
     }
+
+    // Existing subscription — fetch its short_url
+    const subRes = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Basic ${auth}` },
+    });
+    const subData = (await subRes.json()) as { short_url: string };
 
     return {
       alreadyActive: false as const,
       subscriptionId,
-      keyId,
-      customerName: profile?.name ?? "",
+      paymentUrl: subData.short_url,
     };
   });

@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_secrets: {
+        Row: {
+          key: string
+          value: string
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          value: string
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_messages: {
+        Row: {
+          id: string
+          user_id: string
+          message_type: string
+          status: string
+          resend_email_id: string | null
+          sent_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          message_type?: string
+          status?: string
+          resend_email_id?: string | null
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          message_type?: string
+          status?: string
+          resend_email_id?: string | null
+          sent_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          id: string
+          user_id: string
+          full_name: string
+          title: string | null
+          company: string | null
+          linkedin_url: string | null
+          email: string | null
+          phone: string | null
+          score: number | null
+          score_reason: string | null
+          source: string | null
+          delivered_at: string | null
+          batch_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          full_name: string
+          title?: string | null
+          company?: string | null
+          linkedin_url?: string | null
+          email?: string | null
+          phone?: string | null
+          score?: number | null
+          score_reason?: string | null
+          source?: string | null
+          delivered_at?: string | null
+          batch_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          full_name?: string
+          title?: string | null
+          company?: string | null
+          linkedin_url?: string | null
+          email?: string | null
+          phone?: string | null
+          score?: number | null
+          score_reason?: string | null
+          source?: string | null
+          delivered_at?: string | null
+          batch_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

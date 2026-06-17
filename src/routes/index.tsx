@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, MessageCircle, Target, Sparkles, Check } from "lucide-react";
+import { ArrowRight, MessageCircle, Mail, Target, Sparkles, Check } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Leadify — 15 qualified leads. Every morning. On WhatsApp." },
-      { name: "description", content: "Tell us your ideal customer once. We research, score and enrich 15 leads daily — delivered straight to your WhatsApp at 8am IST." },
-      { property: "og:title", content: "Leadify — Daily qualified leads on WhatsApp" },
-      { property: "og:description", content: "15 researched, scored and enriched leads delivered to your WhatsApp every morning." },
+      { title: "Leadify — 15 qualified leads. Every morning. In your inbox." },
+      { name: "description", content: "Tell us your ideal customer once. We research, score and enrich 15 leads daily — delivered straight to your inbox at 8am IST." },
+      { property: "og:title", content: "Leadify — Daily qualified leads in your inbox" },
+      { property: "og:description", content: "15 researched, scored and enriched leads delivered to your inbox every morning." },
     ],
   }),
   component: Landing,
@@ -64,10 +64,10 @@ function Hero() {
           <h1 className="mt-6 text-balance text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl">
             15 qualified leads.
             <br />
-            Every morning. <span className="text-lime">On WhatsApp.</span>
+            Every morning. <span className="text-lime">In your inbox.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground md:text-xl">
-            Tell us your ideal customer once. We research, score and enrich — LinkedIn URL, email and phone — delivered to your WhatsApp by 8&nbsp;AM IST.
+            Tell us your ideal customer once. We research, score and enrich — LinkedIn URL, email and phone — delivered to your inbox by 8&nbsp;AM IST.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
@@ -94,12 +94,12 @@ function SampleLeadCard() {
       <div className="absolute -inset-6 -z-0 rounded-3xl bg-lime/10 blur-2xl" />
       <div className="relative rounded-2xl border border-border bg-surface p-5 shadow-2xl shadow-black/40">
         <div className="flex items-center gap-2 border-b border-border pb-3">
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-[#25D366]/15 text-[#25D366]">
-            <MessageCircle className="h-4 w-4" />
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-lime/15 text-lime">
+            <Mail className="h-4 w-4" />
           </div>
           <div>
             <p className="text-sm font-semibold">Leadify</p>
-            <p className="text-xs text-muted-foreground">today, 8:00 AM</p>
+            <p className="text-xs text-muted-foreground">today, 8:00 AM IST</p>
           </div>
         </div>
         <div className="space-y-3 pt-4 font-mono text-[13px] leading-relaxed text-foreground/90">
@@ -123,7 +123,7 @@ function HowItWorks() {
   const steps = [
     { n: "01", icon: Target, title: "Define your ICP", body: "Industry, role, company size, geography. Takes 2 minutes — once." },
     { n: "02", icon: Sparkles, title: "We do the research", body: "Our agents scan LinkedIn, Twitter and 10+ sources to find real people who match." },
-    { n: "03", icon: MessageCircle, title: "Leads on your WhatsApp", body: "15 scored, enriched leads every morning at 8 AM IST. Just reach out." },
+    { n: "03", icon: MessageCircle, title: "Leads in your inbox", body: "15 scored, enriched leads every morning at 8 AM IST. Just reach out. WhatsApp delivery coming soon." },
   ];
   return (
     <section className="border-t border-border/60 bg-surface/40">
@@ -156,7 +156,7 @@ function Pricing() {
     "15 enriched leads delivered daily",
     "LinkedIn URL, email and phone number",
     "Lead scoring with ICP-fit reasoning",
-    "Delivered to WhatsApp at 8 AM IST",
+    "Delivered to your inbox at 8 AM IST",
     "Deduped automatically — no repeats",
     "Cancel anytime",
   ];
