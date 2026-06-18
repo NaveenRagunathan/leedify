@@ -285,29 +285,28 @@ async function agenticSearch(icp: any): Promise<LinkedInProfile[]> {
 
     for (const q of queries) {
       if (allFound.length >= 40) break;
-      try {
-        const res = await fetch("https://google.serper.dev/search", {
-          method: "POST",
-          headers: {
-            "X-API-KEY": await getSecret("SERPER_API_KEY"),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ q, num: 20 }),
-        });
-        if (!res.ok) continue;
-        const data = await res.json() as any;
-        for (const item of data.organic || []) {
-          if (!item.link) continue;
-          const m = item.link.match(/https?:\/\/(\w+\.)?linkedin\.com\/in\/[\w-]+\/?$/);
-          if (!m || item.link.includes("/posts/")) continue;
-          const norm = normalizeUrl(m[0]);
-          if (seenUrls.has(norm)) continue;
+
+      // Fire all three engines in parallel for each query
+      const engineResults = await Promise.allSettled([
+        searchSerper(q),
+        searchTavily(q),
+        searchExa(q),
+      ]);
+
+      for (const result of engineResults) {
+        if (result.status !== "fulfilled") continue;
+        for (const lead of result.value) {
+          const norm = normalizeUrl(lead.linkedin_url);
+          if (seenUrls.has(norm) || !lead.full_name) continue;
           seenUrls.add(norm);
-          const lead = parseLeadFromSearch(item.title || "", item.snippet || "", m[0]);
-          if (lead.full_name) allFound.push(lead);
+          allFound.push(lead);
         }
-        console.log(`[Serper] Round ${round + 1}: "${q.slice(0, 60)}" → ${allFound.length}`);
-      } catch { continue; }
+      }
+
+      const total = allFound.length;
+      if (total > 0) {
+        console.log(`[Search] Round ${round + 1}: "${q.slice(0, 50)}" → ${total} unique`);
+      }
     }
 
     if (allFound.length > 0) {
@@ -320,6 +319,90 @@ async function agenticSearch(icp: any): Promise<LinkedInProfile[]> {
   }
 
   return allFound;
+}
+
+async function searchSerper(q: string): Promise<LinkedInProfile[]> {
+  const leads: LinkedInProfile[] = [];
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: {
+        "X-API-KEY": await getSecret("SERPER_API_KEY"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ q, num: 20 }),
+    });
+    if (!res.ok) return leads;
+    const data = await res.json() as any;
+    for (const item of data.organic || []) {
+      const m = extractLinkedInUrl(item.link);
+      if (!m) continue;
+      const lead = parseLeadFromSearch(item.title || "", item.snippet || "", m);
+      if (lead.full_name) leads.push(lead);
+    }
+  } catch { /* silent */ }
+  return leads;
+}
+
+async function searchTavily(q: string): Promise<LinkedInProfile[]> {
+  const leads: LinkedInProfile[] = [];
+  try {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: await getSecret("TAVILY_API_KEY"),
+        query: q,
+        search_depth: "basic",
+        max_results: 20,
+        include_domains: ["linkedin.com"],
+      }),
+    });
+    if (!res.ok) return leads;
+    const data = await res.json() as any;
+    for (const item of data.results || []) {
+      const m = extractLinkedInUrl(item.url);
+      if (!m) continue;
+      const lead = parseLeadFromSearch(item.title || "", item.content || "", m);
+      if (lead.full_name) leads.push(lead);
+    }
+  } catch { /* silent */ }
+  return leads;
+}
+
+async function searchExa(q: string): Promise<LinkedInProfile[]> {
+  const leads: LinkedInProfile[] = [];
+  try {
+    const res = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: {
+        "x-api-key": await getSecret("EXA_API_KEY"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: q,
+        numResults: 20,
+        type: "keyword",
+        includeDomains: ["linkedin.com"],
+      }),
+    });
+    if (!res.ok) return leads;
+    const data = await res.json() as any;
+    for (const item of data.results || []) {
+      const m = extractLinkedInUrl(item.url);
+      if (!m) continue;
+      const lead = parseLeadFromSearch(item.title || "", item.text || item.snippet || "", m);
+      if (lead.full_name) leads.push(lead);
+    }
+  } catch { /* silent */ }
+  return leads;
+}
+
+function extractLinkedInUrl(url: string): string | null {
+  if (!url) return null;
+  const m = url.match(/https?:\/\/(\w+\.)?linkedin\.com\/in\/[\w-]+\/?$/);
+  if (!m || url.includes("/posts/")) return null;
+  return m[0];
 }
 
 function parseLeadFromSearch(title: string, snippet: string, url: string): LinkedInProfile {
