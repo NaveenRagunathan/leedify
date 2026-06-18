@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
- * 12 AM cron endpoint: generates and stores leads for all active users.
- * Emails are sent separately by the 8 AM cron (POST /api/public/send-emails).
+ * 8 AM cron endpoint: sends emails for all pending leads generated at 12 AM.
  *
- * POST /api/public/cron-leads
+ * POST /api/public/send-emails
  * Headers: Authorization: Bearer <CRON_SECRET>
  */
-export const Route = createFileRoute("/api/public/cron-leads")({
+export const Route = createFileRoute("/api/public/send-emails")({
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -26,8 +25,8 @@ export const Route = createFileRoute("/api/public/cron-leads")({
           return new Response("Unauthorized", { status: 401 });
         }
 
-        const { generateLeadsForAllUsers } = await import("@/lib/pipeline.server");
-        const results = await generateLeadsForAllUsers();
+        const { sendEmailsForAllUsers } = await import("@/lib/pipeline.server");
+        const results = await sendEmailsForAllUsers();
 
         return new Response(
           JSON.stringify({
@@ -35,7 +34,8 @@ export const Route = createFileRoute("/api/public/cron-leads")({
             usersProcessed: results.length,
             results: results.map((r) => ({
               userId: r.userId,
-              leadsGenerated: r.leadsGenerated,
+              leadsSent: r.leadsSent,
+              emailSent: r.emailSent,
               error: r.error || null,
             })),
           }),

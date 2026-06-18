@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedCheckoutRouteImport } from './routes/_authenticated/checkout'
 import { Route as ApiPublicTriggerLeadsRouteImport } from './routes/api/public/trigger-leads'
+import { Route as ApiPublicSendEmailsRouteImport } from './routes/api/public/send-emails'
 import { Route as ApiPublicRazorpayWebhookRouteImport } from './routes/api/public/razorpay-webhook'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicCronLeadsRouteImport } from './routes/api/public/cron-leads'
@@ -49,6 +50,11 @@ const ApiPublicTriggerLeadsRoute = ApiPublicTriggerLeadsRouteImport.update({
   path: '/api/public/trigger-leads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSendEmailsRoute = ApiPublicSendEmailsRouteImport.update({
+  id: '/api/public/send-emails',
+  path: '/api/public/send-emails',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRazorpayWebhookRoute =
   ApiPublicRazorpayWebhookRouteImport.update({
     id: '/api/public/razorpay-webhook',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron-leads': typeof ApiPublicCronLeadsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
+  '/api/public/send-emails': typeof ApiPublicSendEmailsRoute
   '/api/public/trigger-leads': typeof ApiPublicTriggerLeadsRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/api/public/cron-leads': typeof ApiPublicCronLeadsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
+  '/api/public/send-emails': typeof ApiPublicSendEmailsRoute
   '/api/public/trigger-leads': typeof ApiPublicTriggerLeadsRoute
 }
 export interface FileRoutesById {
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/api/public/cron-leads': typeof ApiPublicCronLeadsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/razorpay-webhook': typeof ApiPublicRazorpayWebhookRoute
+  '/api/public/send-emails': typeof ApiPublicSendEmailsRoute
   '/api/public/trigger-leads': typeof ApiPublicTriggerLeadsRoute
 }
 export interface FileRouteTypes {
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/api/public/cron-leads'
     | '/api/public/health'
     | '/api/public/razorpay-webhook'
+    | '/api/public/send-emails'
     | '/api/public/trigger-leads'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/api/public/cron-leads'
     | '/api/public/health'
     | '/api/public/razorpay-webhook'
+    | '/api/public/send-emails'
     | '/api/public/trigger-leads'
   id:
     | '__root__'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/api/public/cron-leads'
     | '/api/public/health'
     | '/api/public/razorpay-webhook'
+    | '/api/public/send-emails'
     | '/api/public/trigger-leads'
   fileRoutesById: FileRoutesById
 }
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   ApiPublicCronLeadsRoute: typeof ApiPublicCronLeadsRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicRazorpayWebhookRoute: typeof ApiPublicRazorpayWebhookRoute
+  ApiPublicSendEmailsRoute: typeof ApiPublicSendEmailsRoute
   ApiPublicTriggerLeadsRoute: typeof ApiPublicTriggerLeadsRoute
 }
 
@@ -196,6 +209,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/trigger-leads'
       fullPath: '/api/public/trigger-leads'
       preLoaderRoute: typeof ApiPublicTriggerLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/send-emails': {
+      id: '/api/public/send-emails'
+      path: '/api/public/send-emails'
+      fullPath: '/api/public/send-emails'
+      preLoaderRoute: typeof ApiPublicSendEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/razorpay-webhook': {
@@ -263,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronLeadsRoute: ApiPublicCronLeadsRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicRazorpayWebhookRoute: ApiPublicRazorpayWebhookRoute,
+  ApiPublicSendEmailsRoute: ApiPublicSendEmailsRoute,
   ApiPublicTriggerLeadsRoute: ApiPublicTriggerLeadsRoute,
 }
 export const routeTree = rootRouteImport
